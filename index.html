@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TokenForge — ERC-20 Factory</title>
+<style>
+  :root {
+    --bg: #08090a; --surface: #111318; --surface2: #1a1d24;
+    --border: #252830; --accent: #a78bfa; --accent2: #34d399;
+    --text: #f1f0f5; --muted: #6b7280; --danger: #f87171;
+    --radius: 8px; --font: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-padding-top: env(safe-area-inset-top,0px); }
+  body {
+    font-family: var(--font); background: var(--bg); color: var(--text);
+    min-height: 100vh;
+    padding: env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);
+  }
+  header {
+    padding: 18px 28px; display: flex; align-items: center; gap: 14px;
+    border-bottom: 1px solid var(--border); position: sticky;
+    top: env(safe-area-inset-top,0); background: var(--bg); z-index: 10;
+  }
+  .logo-mark { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; }
+  .logo-text { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+  .logo-text span { color: var(--accent); }
+  nav { margin-left: auto; display: flex; gap: 4px; }
+  .tab-btn {
+    background: none; border: 1px solid transparent; padding: 7px 16px;
+    border-radius: var(--radius); cursor: pointer; font-size: 13px; color: var(--muted);
+    font-family: var(--font); transition: all .15s;
+  }
+  .tab-btn.active { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  main { max-width: 820px; margin: 0 auto; padding: 36px 24px; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .hero { margin-bottom: 32px; }
+  .hero h1 { font-size: 26px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 6px; }
+  .hero p { color: var(--muted); font-size: 14px; max-width: 480px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+  input[type=text], input[type=number] {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 11px 14px; color: var(--text);
+    font-family: var(--mono); font-size: 13px; outline: none; transition: border-color .15s;
+  }
+  input:focus { border-color: var(--accent); }
+  .checkbox-group { display: flex; flex-direction: column; gap: 10px; }
+  .check-item { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+  .check-item input { width: auto; }
+  .check-item .check-desc { font-size: 12px; color: var(--muted); display: block; }
+
+  .btn {
+    background: var(--accent); color: #000; border: none; padding: 12px 24px;
+    border-radius: var(--radius); cursor: pointer; font-weight: 700; font-size: 14px;
+    font-family: var(--font); transition: opacity .15s; width: 100%;
+    letter-spacing: -.1px;
+  }
+  .btn:hover { opacity: .88; }
+  .btn.outline { background: none; color: var(--accent); border: 1px solid var(--accent); }
+
+  .preview-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+  }
+  .preview-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; color: var(--muted); }
+  .token-preview {
+    display: flex; align-items: center; gap: 14px; padding: 14px;
+    background: var(--surface2); border-radius: var(--radius); margin-bottom: 16px;
+  }
+  .token-icon {
+    width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; color: #000; font-family: var(--mono); flex-shrink: 0;
+  }
+  .token-name { font-size: 17px; font-weight: 700; }
+  .token-symbol { color: var(--accent); font-family: var(--mono); font-size: 13px; }
+  .token-supply { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .feature-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .tag {
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-family: var(--mono);
+    background: rgba(167,139,250,.12); color: var(--accent); border: 1px solid rgba(167,139,250,.2);
+  }
+  .tag.green { background: rgba(52,211,153,.12); color: var(--accent2); border-color: rgba(52,211,153,.2); }
+
+  .token-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .token-card-left { display: flex; align-items: center; gap: 12px; }
+  .mini-icon {
+    width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 12px; color: #000; flex-shrink: 0;
+  }
+  .token-card-name { font-weight: 600; font-size: 14px; }
+  .token-card-sym { color: var(--accent); font-family: var(--mono); font-size: 12px; }
+
+  .solidity-block {
+    background: #0a0b0d; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; overflow-x: auto; font-family: var(--mono); font-size: 12px;
+    line-height: 1.75; color: #e6edf3;
+  }
+  .kw { color: #c792ea; } .type { color: #82aaff; } .fn { color: #82aaff; }
+  .str { color: #c3e88d; } .cm { color: var(--muted); font-style: italic; }
+  .inherit { color: #f78c6c; }
+  .copy-btn {
+    float: right; background: var(--surface2); border: none; color: var(--text);
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;
+    font-family: var(--mono);
+  }
+  .copy-btn:hover { background: var(--accent); color: #000; }
+
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--surface);
+    border: 1px solid var(--accent2); border-radius: var(--radius);
+    padding: 12px 16px; font-size: 13px; opacity: 0; pointer-events: none;
+    transition: opacity .2s; z-index: 100;
+  }
+  #toast.show { opacity: 1; }
+  .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-key { color: var(--muted); }
+  .info-val { font-family: var(--mono); font-size: 12px; }
+  @media (max-width: 500px) { .grid-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo-mark"></div>
+  <div class="logo-text">Token<span>Forge</span></div>
+  <nav>
+    <button class="tab-btn active" onclick="showTab('deploy')">Deploy Token</button>
+    <button class="tab-btn" onclick="showTab('tokens')">My Tokens</button>
+    <button class="tab-btn" onclick="showTab('contract')">Factory Code</button>
+  </nav>
+</header>
+
+<main>
+  <!-- DEPLOY -->
+  <section class="section active" id="deploy">
+    <div class="hero">
+      <h1>Launch your ERC-20 token</h1>
+      <p>Fill in the details below. The factory contract deploys a fresh token to the chain in one transaction.</p>
+    </div>
+
+    <div class="preview-panel">
+      <h3>Token Preview</h3>
+      <div class="token-preview">
+        <div class="token-icon" id="prev-symbol">TKN</div>
+        <div>
+          <div class="token-name" id="prev-name">My Token</div>
+          <div class="token-symbol" id="prev-sym-text">TKN</div>
+          <div class="token-supply" id="prev-supply">Supply: 1,000,000</div>
+        </div>
+      </div>
+      <div class="feature-tags" id="prev-tags">
+        <span class="tag">ERC-20</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Token Name</label>
+        <input type="text" id="t-name" placeholder="My Token" oninput="updatePreview()" value="" />
+      </div>
+      <div class="form-group">
+        <label>Symbol</label>
+        <input type="text" id="t-sym" placeholder="MTK" oninput="updatePreview()" maxlength="8" />
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Initial Supply</label>
+        <input type="number" id="t-supply" placeholder="1000000" oninput="updatePreview()" />
+      </div>
+      <div class="form-group">
+        <label>Decimals</label>
+        <input type="number" id="t-decimals" placeholder="18" max="18" min="0" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Features</label>
+      <div class="checkbox-group">
+        <label class="check-item">
+          <input type="checkbox" id="f-mint" onchange="updatePreview()">
+          <span>Mintable <span class="check-desc">Owner can mint new tokens after deploy</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" id="f-burn" onchange="updatePreview()">
+          <span>Burnable <span class="check-desc">Holders can burn their own tokens</span></span>
+        </label>
+        <label class="check-item">
+          <input type="checkbox" id="f-pause" onchange="updatePreview()">
+          <span>Pausable <span class="check-desc">Owner can pause all transfers</span></span>
+        </label>
+      </div>
+    </div>
+    <button class="btn" onclick="deployToken()">Deploy Token via Factory</button>
+  </section>
+
+  <!-- MY TOKENS -->
+  <section class="section" id="tokens">
+    <div class="hero">
+      <h1>Deployed tokens</h1>
+      <p>Tokens you've launched through TokenForge. Connect a wallet to see onchain deployments.</p>
+    </div>
+    <div id="token-list"><p style="color:var(--muted);font-size:14px;">No tokens deployed yet. Go to Deploy Token to get started.</p></div>
+  </section>
+
+  <!-- CONTRACT CODE -->
+  <section class="section" id="contract">
+    <div class="hero">
+      <h1>Factory Contract</h1>
+      <p>Deploy <code style="font-family:var(--mono);color:var(--accent)">TokenFactory.sol</code> once. Users call <code style="font-family:var(--mono);color:var(--accent)">createToken()</code> to spawn their own ERC-20.</p>
+    </div>
+    <div class="solidity-block">
+      <button class="copy-btn" onclick="copyContract()">Copy</button>
+<pre id="sol-code">// SPDX-License-Identifier: MIT
+<span class="kw">pragma</span> solidity ^0.8.20;
+
+<span class="kw">import</span> <span class="str">"@openzeppelin/contracts/token/ERC20/ERC20.sol"</span>;
+<span class="kw">import</span> <span class="str">"@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol"</span>;
+<span class="kw">import</span> <span class="str">"@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol"</span>;
+<span class="kw">import</span> <span class="str">"@openzeppelin/contracts/access/Ownable.sol"</span>;
+
+<span class="cm">/// @dev Generated token with optional features</span>
+<span class="kw">contract</span> <span class="type">CustomToken</span> <span class="kw">is</span> <span class="inherit">ERC20</span>, <span class="inherit">ERC20Burnable</span>, <span class="inherit">ERC20Pausable</span>, <span class="inherit">Ownable</span> {
+    <span class="kw">bool</span> <span class="kw">public</span> mintable;
+    <span class="kw">bool</span> <span class="kw">public</span> burnable;
+    <span class="kw">bool</span> <span class="kw">public</span> pausable;
+    <span class="kw">uint8</span> <span class="kw">private</span> _dec;
+
+    <span class="kw">constructor</span>(
+        <span class="type">string</span> <span class="kw">memory</span> name_,
+        <span class="type">string</span> <span class="kw">memory</span> symbol_,
+        <span class="type">uint256</span> initialSupply,
+        <span class="type">uint8</span>   decimals_,
+        <span class="kw">bool</span>    mintable_,
+        <span class="kw">bool</span>    burnable_,
+        <span class="kw">bool</span>    pausable_,
+        <span class="type">address</span> owner_
+    ) <span class="inherit">ERC20</span>(name_, symbol_) <span class="inherit">Ownable</span>(owner_) {
+        _dec = decimals_;
+        mintable = mintable_;
+        burnable = burnable_;
+        pausable = pausable_;
+        _mint(owner_, initialSupply * 10 ** decimals_);
+    }
+
+    <span class="kw">function</span> <span class="fn">decimals</span>() <span class="kw">public</span> <span class="kw">view</span> <span class="kw">override</span> <span class="kw">returns</span> (<span class="type">uint8</span>) { <span class="kw">return</span> _dec; }
+
+    <span class="kw">function</span> <span class="fn">mint</span>(<span class="type">address</span> to, <span class="type">uint256</span> amount) <span class="kw">external</span> <span class="kw">onlyOwner</span> {
+        <span class="kw">require</span>(mintable, <span class="str">"Not mintable"</span>);
+        _mint(to, amount);
+    }
+
+    <span class="kw">function</span> <span class="fn">pause</span>() <span class="kw">external</span> <span class="kw">onlyOwner</span> {
+        <span class="kw">require</span>(pausable, <span class="str">"Not pausable"</span>); _pause();
+    }
+    <span class="kw">function</span> <span class="fn">unpause</span>() <span class="kw">external</span> <span class="kw">onlyOwner</span> {
+        <span class="kw">require</span>(pausable, <span class="str">"Not pausable"</span>); _unpause();
+    }
+
+    <span class="kw">function</span> <span class="fn">_update</span>(<span class="type">address</span> from, <span class="type">address</span> to, <span class="type">uint256</span> value)
+        <span class="kw">internal</span> <span class="kw">override</span>(<span class="type">ERC20</span>, <span class="type">ERC20Pausable</span>)
+    { <span class="kw">super</span>._update(from, to, value); }
+}
+
+<span class="cm">/// @title TokenFactory
+/// @notice Anyone can deploy their own ERC-20 in one call</span>
+<span class="kw">contract</span> <span class="type">TokenFactory</span> {
+
+    <span class="kw">struct</span> <span class="type">TokenInfo</span> {
+        <span class="type">address</span> tokenAddress;
+        <span class="type">address</span> owner;
+        <span class="type">string</span>  name;
+        <span class="type">string</span>  symbol;
+        <span class="type">uint256</span> supply;
+        <span class="type">uint256</span> createdAt;
+    }
+
+    <span class="type">TokenInfo</span>[] <span class="kw">public</span> allTokens;
+    <span class="kw">mapping</span>(<span class="type">address</span> => <span class="type">address</span>[]) <span class="kw">public</span> ownerTokens;
+
+    <span class="kw">event</span> <span class="fn">TokenCreated</span>(
+        <span class="type">address</span> <span class="kw">indexed</span> tokenAddress,
+        <span class="type">address</span> <span class="kw">indexed</span> owner,
+        <span class="type">string</span> name,
+        <span class="type">string</span> symbol,
+        <span class="type">uint256</span> supply
+    );
+
+    <span class="kw">function</span> <span class="fn">createToken</span>(
+        <span class="type">string</span> <span class="kw">calldata</span> name,
+        <span class="type">string</span> <span class="kw">calldata</span> symbol,
+        <span class="type">uint256</span> initialSupply,
+        <span class="type">uint8</span>   decimals_,
+        <span class="kw">bool</span>    mintable,
+        <span class="kw">bool</span>    burnable,
+        <span class="kw">bool</span>    pausable
+    ) <span class="kw">external</span> <span class="kw">returns</span> (<span class="type">address</span>) {
+        <span class="type">CustomToken</span> token = <span class="kw">new</span> <span class="type">CustomToken</span>(
+            name, symbol, initialSupply, decimals_,
+            mintable, burnable, pausable, msg.sender
+        );
+        allTokens.push(<span class="type">TokenInfo</span>({
+            tokenAddress: address(token),
+            owner: msg.sender,
+            name: name,
+            symbol: symbol,
+            supply: initialSupply,
+            createdAt: block.timestamp
+        }));
+        ownerTokens[msg.sender].push(address(token));
+        <span class="kw">emit</span> <span class="fn">TokenCreated</span>(address(token), msg.sender, name, symbol, initialSupply);
+        <span class="kw">return</span> address(token);
+    }
+
+    <span class="kw">function</span> <span class="fn">getTokenCount</span>() <span class="kw">external</span> <span class="kw">view</span> <span class="kw">returns</span> (<span class="type">uint256</span>) {
+        <span class="kw">return</span> allTokens.length;
+    }
+
+    <span class="kw">function</span> <span class="fn">getOwnerTokens</span>(<span class="type">address</span> owner)
+        <span class="kw">external</span> <span class="kw">view</span> <span class="kw">returns</span> (<span class="type">address</span>[] <span class="kw">memory</span>)
+    {
+        <span class="kw">return</span> ownerTokens[owner];
+    }
+}</pre>
+    </div>
+    <div style="margin-top:16px;" class="preview-panel">
+      <div class="info-row"><span class="info-key">OpenZeppelin</span><span class="info-val">^5.0.0</span></div>
+      <div class="info-row"><span class="info-key">Network</span><span class="info-val">Any EVM (Celo recommended)</span></div>
+      <div class="info-row"><span class="info-key">Deploy once</span><span class="info-val">TokenFactory — users call createToken()</span></div>
+      <div class="info-row"><span class="info-key">Features</span><span class="info-val">Mint · Burn · Pause · Custom decimals</span></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const deployedTokens = [];
+
+  function showTab(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function fmt(n) { return Number(n||0).toLocaleString(); }
+
+  function updatePreview() {
+    const name = document.getElementById('t-name').value || 'My Token';
+    const sym  = (document.getElementById('t-sym').value || 'TKN').toUpperCase();
+    const sup  = document.getElementById('t-supply').value || '1000000';
+    const mint = document.getElementById('f-mint').checked;
+    const burn = document.getElementById('f-burn').checked;
+    const pause = document.getElementById('f-pause').checked;
+
+    document.getElementById('prev-name').textContent = name;
+    document.getElementById('prev-sym-text').textContent = sym;
+    document.getElementById('prev-symbol').textContent = sym.slice(0,4);
+    document.getElementById('prev-supply').textContent = 'Supply: ' + fmt(sup);
+
+    const tags = ['<span class="tag">ERC-20</span>'];
+    if (mint) tags.push('<span class="tag green">Mintable</span>');
+    if (burn) tags.push('<span class="tag green">Burnable</span>');
+    if (pause) tags.push('<span class="tag green">Pausable</span>');
+    document.getElementById('prev-tags').innerHTML = tags.join('');
+  }
+
+  function deployToken() {
+    const name = document.getElementById('t-name').value.trim();
+    const sym  = document.getElementById('t-sym').value.trim().toUpperCase();
+    const supply = document.getElementById('t-supply').value.trim();
+    const dec  = document.getElementById('t-decimals').value || '18';
+    if (!name || !sym || !supply) { toast('Fill in name, symbol, and supply.'); return; }
+
+    const fakeAddr = '0x' + Math.random().toString(16).slice(2,12) + '...';
+    deployedTokens.push({ name, sym, supply, dec,
+      mint: document.getElementById('f-mint').checked,
+      burn: document.getElementById('f-burn').checked,
+      pause: document.getElementById('f-pause').checked,
+      addr: fakeAddr, ts: Date.now()
+    });
+    renderTokens();
+    toast(`${name} (${sym}) deployed!`);
+    showTabById('tokens');
+  }
+
+  function showTabById(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+  }
+
+  function renderTokens() {
+    const list = document.getElementById('token-list');
+    if (!deployedTokens.length) {
+      list.innerHTML = '<p style="color:var(--muted);font-size:14px;">No tokens deployed yet.</p>';
+      return;
+    }
+    list.innerHTML = deployedTokens.map(t => {
+      const tags = ['<span class="tag">ERC-20</span>'];
+      if (t.mint) tags.push('<span class="tag green">Mintable</span>');
+      if (t.burn) tags.push('<span class="tag green">Burnable</span>');
+      if (t.pause) tags.push('<span class="tag green">Pausable</span>');
+      return `
+      <div class="token-card">
+        <div class="token-card-left">
+          <div class="mini-icon">${t.sym.slice(0,3)}</div>
+          <div>
+            <div class="token-card-name">${t.name}</div>
+            <div class="token-card-sym">${t.sym} &nbsp;·&nbsp; ${fmt(t.supply)} supply</div>
+            <div style="margin-top:6px;">${tags.join(' ')}</div>
+          </div>
+        </div>
+        <div style="text-align:right;font-size:12px;color:var(--muted);">
+          <div style="font-family:var(--mono);">${t.addr}</div>
+          <div>${new Date(t.ts).toLocaleDateString()}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function copyContract() {
+    navigator.clipboard.writeText(document.getElementById('sol-code').innerText)
+      .then(() => toast('Contract code copied!'));
+  }
+
+  updatePreview();
+</script>
+</body>
+</html>
