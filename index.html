@@ -3,450 +3,275 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>TokenForge — ERC-20 Factory</title>
+<title>TokenForge — ERC-20 Factory on Botchain</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
 <style>
-  :root {
-    --bg: #08090a; --surface: #111318; --surface2: #1a1d24;
-    --border: #252830; --accent: #a78bfa; --accent2: #34d399;
-    --text: #f1f0f5; --muted: #6b7280; --danger: #f87171;
-    --radius: 8px; --font: 'Inter', system-ui, sans-serif;
-    --mono: 'JetBrains Mono', 'Fira Code', monospace;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-padding-top: env(safe-area-inset-top,0px); }
-  body {
-    font-family: var(--font); background: var(--bg); color: var(--text);
-    min-height: 100vh;
-    padding: env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);
-  }
-  header {
-    padding: 18px 28px; display: flex; align-items: center; gap: 14px;
-    border-bottom: 1px solid var(--border); position: sticky;
-    top: env(safe-area-inset-top,0); background: var(--bg); z-index: 10;
-  }
-  .logo-mark { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; }
-  .logo-text { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
-  .logo-text span { color: var(--accent); }
-  nav { margin-left: auto; display: flex; gap: 4px; }
-  .tab-btn {
-    background: none; border: 1px solid transparent; padding: 7px 16px;
-    border-radius: var(--radius); cursor: pointer; font-size: 13px; color: var(--muted);
-    font-family: var(--font); transition: all .15s;
-  }
-  .tab-btn.active { background: var(--surface2); border-color: var(--border); color: var(--text); }
-  .tab-btn:hover:not(.active) { color: var(--text); }
-
-  main { max-width: 820px; margin: 0 auto; padding: 36px 24px; }
-  .section { display: none; }
-  .section.active { display: block; }
-
-  .hero { margin-bottom: 32px; }
-  .hero h1 { font-size: 26px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 6px; }
-  .hero p { color: var(--muted); font-size: 14px; max-width: 480px; }
-
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .form-group { margin-bottom: 16px; }
-  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
-  input[type=text], input[type=number] {
-    width: 100%; background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 11px 14px; color: var(--text);
-    font-family: var(--mono); font-size: 13px; outline: none; transition: border-color .15s;
-  }
-  input:focus { border-color: var(--accent); }
-  .checkbox-group { display: flex; flex-direction: column; gap: 10px; }
-  .check-item { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
-  .check-item input { width: auto; }
-  .check-item .check-desc { font-size: 12px; color: var(--muted); display: block; }
-
-  .btn {
-    background: var(--accent); color: #000; border: none; padding: 12px 24px;
-    border-radius: var(--radius); cursor: pointer; font-weight: 700; font-size: 14px;
-    font-family: var(--font); transition: opacity .15s; width: 100%;
-    letter-spacing: -.1px;
-  }
-  .btn:hover { opacity: .88; }
-  .btn.outline { background: none; color: var(--accent); border: 1px solid var(--accent); }
-
-  .preview-panel {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
-  }
-  .preview-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; color: var(--muted); }
-  .token-preview {
-    display: flex; align-items: center; gap: 14px; padding: 14px;
-    background: var(--surface2); border-radius: var(--radius); margin-bottom: 16px;
-  }
-  .token-icon {
-    width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 16px; color: #000; font-family: var(--mono); flex-shrink: 0;
-  }
-  .token-name { font-size: 17px; font-weight: 700; }
-  .token-symbol { color: var(--accent); font-family: var(--mono); font-size: 13px; }
-  .token-supply { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .feature-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .tag {
-    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-family: var(--mono);
-    background: rgba(167,139,250,.12); color: var(--accent); border: 1px solid rgba(167,139,250,.2);
-  }
-  .tag.green { background: rgba(52,211,153,.12); color: var(--accent2); border-color: rgba(52,211,153,.2); }
-
-  .token-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .token-card-left { display: flex; align-items: center; gap: 12px; }
-  .mini-icon {
-    width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 12px; color: #000; flex-shrink: 0;
-  }
-  .token-card-name { font-weight: 600; font-size: 14px; }
-  .token-card-sym { color: var(--accent); font-family: var(--mono); font-size: 12px; }
-
-  .solidity-block {
-    background: #0a0b0d; border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 20px; overflow-x: auto; font-family: var(--mono); font-size: 12px;
-    line-height: 1.75; color: #e6edf3;
-  }
-  .kw { color: #c792ea; } .type { color: #82aaff; } .fn { color: #82aaff; }
-  .str { color: #c3e88d; } .cm { color: var(--muted); font-style: italic; }
-  .inherit { color: #f78c6c; }
-  .copy-btn {
-    float: right; background: var(--surface2); border: none; color: var(--text);
-    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;
-    font-family: var(--mono);
-  }
-  .copy-btn:hover { background: var(--accent); color: #000; }
-
-  #toast {
-    position: fixed; bottom: 24px; right: 24px; background: var(--surface);
-    border: 1px solid var(--accent2); border-radius: var(--radius);
-    padding: 12px 16px; font-size: 13px; opacity: 0; pointer-events: none;
-    transition: opacity .2s; z-index: 100;
-  }
-  #toast.show { opacity: 1; }
-  .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-  .info-row:last-child { border-bottom: none; }
-  .info-key { color: var(--muted); }
-  .info-val { font-family: var(--mono); font-size: 12px; }
-  @media (max-width: 500px) { .grid-2 { grid-template-columns: 1fr; } }
+  :root{--bg:#08090a;--surface:#111318;--surface2:#1a1d24;--border:#252830;--accent:#a78bfa;--green:#34d399;--red:#f87171;--yellow:#fbbf24;--text:#f1f0f5;--muted:#6b7280;--radius:8px;--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono','Fira Code',monospace}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+  header{padding:16px 24px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:20}
+  .logo-mark{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--green));border-radius:8px;flex-shrink:0}
+  .logo{font-size:16px;font-weight:700}.logo span{color:var(--accent)}
+  nav{margin-left:auto;display:flex;gap:4px}
+  .tab-btn{background:none;border:1px solid transparent;padding:6px 14px;border-radius:var(--radius);cursor:pointer;font-size:13px;color:var(--muted);font-family:var(--font);transition:all .15s}
+  .tab-btn.active{background:var(--surface2);border-color:var(--border);color:var(--text)}
+  .wallet-btn{background:var(--accent);color:#000;border:none;padding:7px 16px;border-radius:var(--radius);cursor:pointer;font-weight:700;font-size:13px;font-family:var(--font);white-space:nowrap}
+  .wallet-btn.connected{background:var(--surface);color:var(--green);border:1px solid var(--green)}
+  main{max-width:820px;margin:0 auto;padding:28px 24px}
+  .section{display:none}.section.active{display:block}
+  .network-bar{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:var(--radius);padding:8px 14px;font-size:12px;color:var(--accent);margin-bottom:20px;display:flex;align-items:center;gap:8px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+  .form-group{margin-bottom:14px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+  input[type=text],input[type=number]{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s}
+  input:focus{border-color:var(--accent)}
+  .check-group{display:flex;flex-direction:column;gap:8px}
+  .check-item{display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer}
+  .check-item input{width:auto}
+  .check-desc{font-size:11px;color:var(--muted)}
+  .btn{border:none;padding:11px 22px;border-radius:var(--radius);cursor:pointer;font-weight:700;font-size:14px;font-family:var(--font);transition:opacity .15s;width:100%}
+  .btn:hover{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.primary{background:var(--accent);color:#000}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .preview{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px}
+  .preview h3{font-size:12px;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.4px}
+  .token-preview{display:flex;align-items:center;gap:14px;background:var(--surface2);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+  .t-icon{width:46px;height:46px;background:linear-gradient(135deg,var(--accent),var(--green));border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#000;font-family:var(--mono);flex-shrink:0}
+  .t-name{font-size:16px;font-weight:700}.t-sym{color:var(--accent);font-family:var(--mono);font-size:12px}
+  .t-sup{color:var(--muted);font-size:11px;margin-top:2px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tag{padding:2px 9px;border-radius:20px;font-size:11px;font-family:var(--mono);background:rgba(167,139,250,.1);color:var(--accent);border:1px solid rgba(167,139,250,.2)}
+  .tag.green{background:rgba(52,211,153,.1);color:var(--green);border-color:rgba(52,211,153,.2)}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+  .panel-head{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+  .token-card{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border)}
+  .token-card:last-child{border-bottom:none}
+  .mini-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--green));border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#000;flex-shrink:0}
+  .tk-name{font-weight:600;font-size:14px}.tk-sym{color:var(--accent);font-family:var(--mono);font-size:12px}
+  .mono{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  #toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 16px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:340px}
+  #toast.show{opacity:1}#toast.err{border-color:var(--red);color:var(--red)}
+  .tx-link{color:var(--accent);font-family:var(--mono);font-size:11px;text-decoration:none}
+  .tx-link:hover{text-decoration:underline}
+  .h2{font-size:18px;font-weight:700;margin-bottom:4px}.sub{color:var(--muted);font-size:13px;margin-bottom:22px}
+  @media(max-width:520px){.grid-2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header>
   <div class="logo-mark"></div>
-  <div class="logo-text">Token<span>Forge</span></div>
+  <div class="logo">Token<span>Forge</span></div>
   <nav>
-    <button class="tab-btn active" onclick="showTab('deploy')">Deploy Token</button>
-    <button class="tab-btn" onclick="showTab('tokens')">My Tokens</button>
-    <button class="tab-btn" onclick="showTab('contract')">Factory Code</button>
+    <button class="tab-btn active" onclick="goTab('deploy',this)">Deploy Token</button>
+    <button class="tab-btn" onclick="goTab('mytokens',this)">My Tokens</button>
   </nav>
+  <button class="wallet-btn" id="wb" onclick="connectWallet()">Connect Wallet</button>
 </header>
-
 <main>
-  <!-- DEPLOY -->
-  <section class="section active" id="deploy">
-    <div class="hero">
-      <h1>Launch your ERC-20 token</h1>
-      <p>Fill in the details below. The factory contract deploys a fresh token to the chain in one transaction.</p>
-    </div>
 
-    <div class="preview-panel">
-      <h3>Token Preview</h3>
-      <div class="token-preview">
-        <div class="token-icon" id="prev-symbol">TKN</div>
-        <div>
-          <div class="token-name" id="prev-name">My Token</div>
-          <div class="token-symbol" id="prev-sym-text">TKN</div>
-          <div class="token-supply" id="prev-supply">Supply: 1,000,000</div>
-        </div>
-      </div>
-      <div class="feature-tags" id="prev-tags">
-        <span class="tag">ERC-20</span>
-      </div>
-    </div>
+<!-- DEPLOY -->
+<section class="section active" id="deploy">
+  <div class="h2">Launch your ERC-20 token</div>
+  <p class="sub">One transaction on Botchain — the factory deploys a fresh token contract owned by you.</p>
+  <div id="net-bar" class="network-bar" style="display:none"><div class="dot"></div>Botchain · Chain ID 968 · <a href="https://scan.bohr.life" target="_blank" style="color:var(--accent)">scan.bohr.life ↗</a></div>
 
-    <div class="grid-2">
-      <div class="form-group">
-        <label>Token Name</label>
-        <input type="text" id="t-name" placeholder="My Token" oninput="updatePreview()" value="" />
-      </div>
-      <div class="form-group">
-        <label>Symbol</label>
-        <input type="text" id="t-sym" placeholder="MTK" oninput="updatePreview()" maxlength="8" />
-      </div>
+  <div class="preview">
+    <h3>Token Preview</h3>
+    <div class="token-preview">
+      <div class="t-icon" id="p-sym">TKN</div>
+      <div><div class="t-name" id="p-name">My Token</div><div class="t-sym" id="p-sym2">TKN</div><div class="t-sup" id="p-sup">Supply: 1,000,000</div></div>
     </div>
-    <div class="grid-2">
-      <div class="form-group">
-        <label>Initial Supply</label>
-        <input type="number" id="t-supply" placeholder="1000000" oninput="updatePreview()" />
-      </div>
-      <div class="form-group">
-        <label>Decimals</label>
-        <input type="number" id="t-decimals" placeholder="18" max="18" min="0" />
-      </div>
+    <div class="tags" id="p-tags"><span class="tag">ERC-20</span></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="form-group"><label>Token Name</label><input type="text" id="t-name" placeholder="My Token" oninput="updatePreview()"/></div>
+    <div class="form-group"><label>Symbol</label><input type="text" id="t-sym" placeholder="MTK" maxlength="8" oninput="updatePreview()"/></div>
+  </div>
+  <div class="grid-2">
+    <div class="form-group"><label>Initial Supply</label><input type="number" id="t-sup" placeholder="1000000" oninput="updatePreview()"/></div>
+    <div class="form-group"><label>Decimals (0–18)</label><input type="number" id="t-dec" placeholder="18" min="0" max="18"/></div>
+  </div>
+  <div class="form-group">
+    <label>Features</label>
+    <div class="check-group">
+      <label class="check-item"><input type="checkbox" id="f-mint" onchange="updatePreview()"><span>Mintable <span class="check-desc">— owner can mint new tokens</span></span></label>
+      <label class="check-item"><input type="checkbox" id="f-burn" onchange="updatePreview()"><span>Burnable <span class="check-desc">— holders can burn tokens</span></span></label>
+      <label class="check-item"><input type="checkbox" id="f-pause" onchange="updatePreview()"><span>Pausable <span class="check-desc">— owner can pause transfers</span></span></label>
     </div>
-    <div class="form-group">
-      <label>Features</label>
-      <div class="checkbox-group">
-        <label class="check-item">
-          <input type="checkbox" id="f-mint" onchange="updatePreview()">
-          <span>Mintable <span class="check-desc">Owner can mint new tokens after deploy</span></span>
-        </label>
-        <label class="check-item">
-          <input type="checkbox" id="f-burn" onchange="updatePreview()">
-          <span>Burnable <span class="check-desc">Holders can burn their own tokens</span></span>
-        </label>
-        <label class="check-item">
-          <input type="checkbox" id="f-pause" onchange="updatePreview()">
-          <span>Pausable <span class="check-desc">Owner can pause all transfers</span></span>
-        </label>
-      </div>
-    </div>
-    <button class="btn" onclick="deployToken()">Deploy Token via Factory</button>
-  </section>
+  </div>
+  <button class="btn primary" id="deploy-btn" onclick="deployToken()">Deploy Token on Botchain</button>
+  <div id="deploy-tx" style="margin-top:12px;font-size:12px;display:none"></div>
+</section>
 
-  <!-- MY TOKENS -->
-  <section class="section" id="tokens">
-    <div class="hero">
-      <h1>Deployed tokens</h1>
-      <p>Tokens you've launched through TokenForge. Connect a wallet to see onchain deployments.</p>
-    </div>
-    <div id="token-list"><p style="color:var(--muted);font-size:14px;">No tokens deployed yet. Go to Deploy Token to get started.</p></div>
-  </section>
+<!-- MY TOKENS -->
+<section class="section" id="mytokens">
+  <div class="h2">My Deployed Tokens</div>
+  <p class="sub">Tokens you've launched through TokenForge on Botchain.</p>
+  <div class="panel"><div class="panel-head">Tokens</div><div id="token-list"><div style="padding:24px;color:var(--muted);font-size:13px">Connect your wallet to see your tokens.</div></div></div>
+</section>
 
-  <!-- CONTRACT CODE -->
-  <section class="section" id="contract">
-    <div class="hero">
-      <h1>Factory Contract</h1>
-      <p>Deploy <code style="font-family:var(--mono);color:var(--accent)">TokenFactory.sol</code> once. Users call <code style="font-family:var(--mono);color:var(--accent)">createToken()</code> to spawn their own ERC-20.</p>
-    </div>
-    <div class="solidity-block">
-      <button class="copy-btn" onclick="copyContract()">Copy</button>
-<pre id="sol-code">// SPDX-License-Identifier: MIT
-<span class="kw">pragma</span> solidity ^0.8.20;
+</main>
+<div id="toast"></div>
+<script>
+const CHAIN_ID = 968;
+const RPC_URL  = 'https://rpc.bohr.life';
+const SCAN_URL = 'https://scan.bohr.life';
+const FACTORY_ADDRESS = '0x211113A00151C9bBf7Dd8e7c134C0Bf9b7d5fC57'; // replace after deploy
 
-<span class="kw">import</span> <span class="str">"@openzeppelin/contracts/token/ERC20/ERC20.sol"</span>;
-<span class="kw">import</span> <span class="str">"@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol"</span>;
-<span class="kw">import</span> <span class="str">"@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol"</span>;
-<span class="kw">import</span> <span class="str">"@openzeppelin/contracts/access/Ownable.sol"</span>;
+const ABI = [
+  "function createToken(string,string,uint256,uint8,bool,bool,bool) external returns (address)",
+  "function getOwnerTokens(address) view returns (address[])",
+  "function getTokenInfo(address) view returns (tuple(address tokenAddress,address owner,string name,string symbol,uint256 initialSupply,uint8 decimals,bool mintable,bool burnable,bool pausable,uint256 createdAt))",
+  "function getTokenCount() view returns (uint256)",
+  "event TokenCreated(address indexed tokenAddress,address indexed owner,string name,string symbol,uint256 initialSupply,uint8 decimals,bool mintable,bool burnable,bool pausable,uint256 timestamp)"
+];
 
-<span class="cm">/// @dev Generated token with optional features</span>
-<span class="kw">contract</span> <span class="type">CustomToken</span> <span class="kw">is</span> <span class="inherit">ERC20</span>, <span class="inherit">ERC20Burnable</span>, <span class="inherit">ERC20Pausable</span>, <span class="inherit">Ownable</span> {
-    <span class="kw">bool</span> <span class="kw">public</span> mintable;
-    <span class="kw">bool</span> <span class="kw">public</span> burnable;
-    <span class="kw">bool</span> <span class="kw">public</span> pausable;
-    <span class="kw">uint8</span> <span class="kw">private</span> _dec;
+const BOTCHAIN = {
+  chainId:'0x'+CHAIN_ID.toString(16), chainName:'Botchain',
+  nativeCurrency:{name:'BOT',symbol:'BOT',decimals:18},
+  rpcUrls:[RPC_URL], blockExplorerUrls:[SCAN_URL]
+};
 
-    <span class="kw">constructor</span>(
-        <span class="type">string</span> <span class="kw">memory</span> name_,
-        <span class="type">string</span> <span class="kw">memory</span> symbol_,
-        <span class="type">uint256</span> initialSupply,
-        <span class="type">uint8</span>   decimals_,
-        <span class="kw">bool</span>    mintable_,
-        <span class="kw">bool</span>    burnable_,
-        <span class="kw">bool</span>    pausable_,
-        <span class="type">address</span> owner_
-    ) <span class="inherit">ERC20</span>(name_, symbol_) <span class="inherit">Ownable</span>(owner_) {
-        _dec = decimals_;
-        mintable = mintable_;
-        burnable = burnable_;
-        pausable = pausable_;
-        _mint(owner_, initialSupply * 10 ** decimals_);
+let provider, signer, contract, userAddress;
+const localTokens = [];
+
+async function connectWallet() {
+  if (!window.ethereum) { toast('No wallet detected. Install MetaMask.', true); return; }
+  try {
+    await window.ethereum.request({method:'eth_requestAccounts'});
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const net = await provider.getNetwork();
+    if (Number(net.chainId) !== CHAIN_ID) {
+      try { await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:BOTCHAIN.chainId}]}); }
+      catch(e) { if(e.code===4902) await window.ethereum.request({method:'wallet_addEthereumChain',params:[BOTCHAIN]}); }
+      provider = new ethers.BrowserProvider(window.ethereum);
     }
-
-    <span class="kw">function</span> <span class="fn">decimals</span>() <span class="kw">public</span> <span class="kw">view</span> <span class="kw">override</span> <span class="kw">returns</span> (<span class="type">uint8</span>) { <span class="kw">return</span> _dec; }
-
-    <span class="kw">function</span> <span class="fn">mint</span>(<span class="type">address</span> to, <span class="type">uint256</span> amount) <span class="kw">external</span> <span class="kw">onlyOwner</span> {
-        <span class="kw">require</span>(mintable, <span class="str">"Not mintable"</span>);
-        _mint(to, amount);
-    }
-
-    <span class="kw">function</span> <span class="fn">pause</span>() <span class="kw">external</span> <span class="kw">onlyOwner</span> {
-        <span class="kw">require</span>(pausable, <span class="str">"Not pausable"</span>); _pause();
-    }
-    <span class="kw">function</span> <span class="fn">unpause</span>() <span class="kw">external</span> <span class="kw">onlyOwner</span> {
-        <span class="kw">require</span>(pausable, <span class="str">"Not pausable"</span>); _unpause();
-    }
-
-    <span class="kw">function</span> <span class="fn">_update</span>(<span class="type">address</span> from, <span class="type">address</span> to, <span class="type">uint256</span> value)
-        <span class="kw">internal</span> <span class="kw">override</span>(<span class="type">ERC20</span>, <span class="type">ERC20Pausable</span>)
-    { <span class="kw">super</span>._update(from, to, value); }
+    signer      = await provider.getSigner();
+    userAddress = await signer.getAddress();
+    contract    = new ethers.Contract(FACTORY_ADDRESS, ABI, signer);
+    document.getElementById('wb').textContent = short(userAddress);
+    document.getElementById('wb').classList.add('connected');
+    document.getElementById('net-bar').style.display = 'flex';
+    toast('Connected to Botchain');
+    loadMyTokens();
+  } catch(e) { toast(e.message, true); }
 }
 
-<span class="cm">/// @title TokenFactory
-/// @notice Anyone can deploy their own ERC-20 in one call</span>
-<span class="kw">contract</span> <span class="type">TokenFactory</span> {
+function short(a) { return a.slice(0,6)+'…'+a.slice(-4); }
+function scanTx(h){ return `${SCAN_URL}/tx/${h}`; }
+function scanAddr(a){ return `${SCAN_URL}/address/${a}`; }
+function txLink(h){ return `<a class="tx-link" href="${scanTx(h)}" target="_blank">View on Explorer ↗</a>`; }
+function toast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.toggle('err',err);
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show','err'),3500);
+}
+function goTab(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active'); btn.classList.add('active');
+  if(id==='mytokens') loadMyTokens();
+}
+function fmt(n){ return Number(n||0).toLocaleString(); }
+function updatePreview(){
+  const name=(document.getElementById('t-name').value||'My Token');
+  const sym=(document.getElementById('t-sym').value||'TKN').toUpperCase();
+  const sup=document.getElementById('t-sup').value||'1000000';
+  const mint=document.getElementById('f-mint').checked;
+  const burn=document.getElementById('f-burn').checked;
+  const pause=document.getElementById('f-pause').checked;
+  document.getElementById('p-name').textContent=name;
+  document.getElementById('p-sym').textContent=sym.slice(0,4);
+  document.getElementById('p-sym2').textContent=sym;
+  document.getElementById('p-sup').textContent='Supply: '+fmt(sup);
+  const tags=['<span class="tag">ERC-20</span>'];
+  if(mint) tags.push('<span class="tag green">Mintable</span>');
+  if(burn) tags.push('<span class="tag green">Burnable</span>');
+  if(pause) tags.push('<span class="tag green">Pausable</span>');
+  document.getElementById('p-tags').innerHTML=tags.join('');
+}
 
-    <span class="kw">struct</span> <span class="type">TokenInfo</span> {
-        <span class="type">address</span> tokenAddress;
-        <span class="type">address</span> owner;
-        <span class="type">string</span>  name;
-        <span class="type">string</span>  symbol;
-        <span class="type">uint256</span> supply;
-        <span class="type">uint256</span> createdAt;
+async function deployToken(){
+  if(!signer){toast('Connect wallet first',true);return;}
+  const name=document.getElementById('t-name').value.trim();
+  const sym=document.getElementById('t-sym').value.trim().toUpperCase();
+  const sup=document.getElementById('t-sup').value.trim();
+  const dec=parseInt(document.getElementById('t-dec').value)||18;
+  const mint=document.getElementById('f-mint').checked;
+  const burn=document.getElementById('f-burn').checked;
+  const pause=document.getElementById('f-pause').checked;
+  if(!name||!sym||!sup){toast('Fill in name, symbol, and supply',true);return;}
+  try{
+    const btn=document.getElementById('deploy-btn');
+    btn.disabled=true; btn.textContent='Deploying…';
+    const tx=await contract.createToken(name,sym,BigInt(sup),dec,mint,burn,pause);
+    const el=document.getElementById('deploy-tx');
+    el.style.display='block'; el.innerHTML='Pending… '+txLink(tx.hash);
+    const receipt=await tx.wait();
+    // parse TokenCreated event to get token address
+    let tokenAddr='unknown';
+    for(const log of receipt.logs){
+      try{
+        const parsed=contract.interface.parseLog(log);
+        if(parsed&&parsed.name==='TokenCreated'){tokenAddr=parsed.args.tokenAddress;break;}
+      }catch{}
     }
+    localTokens.unshift({name,sym,sup,dec,mint,burn,pause,addr:tokenAddr,hash:tx.hash,ts:Date.now()});
+    el.innerHTML=`✅ Token deployed at <a class="tx-link" href="${scanAddr(tokenAddr)}" target="_blank">${short(tokenAddr)}</a> &nbsp; ${txLink(tx.hash)}`;
+    btn.disabled=false; btn.textContent='Deploy Token on Botchain';
+    toast(`${name} (${sym}) deployed on Botchain`);
+  }catch(e){toast(e.reason||e.message,true);document.getElementById('deploy-btn').disabled=false;document.getElementById('deploy-btn').textContent='Deploy Token on Botchain';}
+}
 
-    <span class="type">TokenInfo</span>[] <span class="kw">public</span> allTokens;
-    <span class="kw">mapping</span>(<span class="type">address</span> => <span class="type">address</span>[]) <span class="kw">public</span> ownerTokens;
-
-    <span class="kw">event</span> <span class="fn">TokenCreated</span>(
-        <span class="type">address</span> <span class="kw">indexed</span> tokenAddress,
-        <span class="type">address</span> <span class="kw">indexed</span> owner,
-        <span class="type">string</span> name,
-        <span class="type">string</span> symbol,
-        <span class="type">uint256</span> supply
-    );
-
-    <span class="kw">function</span> <span class="fn">createToken</span>(
-        <span class="type">string</span> <span class="kw">calldata</span> name,
-        <span class="type">string</span> <span class="kw">calldata</span> symbol,
-        <span class="type">uint256</span> initialSupply,
-        <span class="type">uint8</span>   decimals_,
-        <span class="kw">bool</span>    mintable,
-        <span class="kw">bool</span>    burnable,
-        <span class="kw">bool</span>    pausable
-    ) <span class="kw">external</span> <span class="kw">returns</span> (<span class="type">address</span>) {
-        <span class="type">CustomToken</span> token = <span class="kw">new</span> <span class="type">CustomToken</span>(
-            name, symbol, initialSupply, decimals_,
-            mintable, burnable, pausable, msg.sender
-        );
-        allTokens.push(<span class="type">TokenInfo</span>({
-            tokenAddress: address(token),
-            owner: msg.sender,
-            name: name,
-            symbol: symbol,
-            supply: initialSupply,
-            createdAt: block.timestamp
-        }));
-        ownerTokens[msg.sender].push(address(token));
-        <span class="kw">emit</span> <span class="fn">TokenCreated</span>(address(token), msg.sender, name, symbol, initialSupply);
-        <span class="kw">return</span> address(token);
-    }
-
-    <span class="kw">function</span> <span class="fn">getTokenCount</span>() <span class="kw">external</span> <span class="kw">view</span> <span class="kw">returns</span> (<span class="type">uint256</span>) {
-        <span class="kw">return</span> allTokens.length;
-    }
-
-    <span class="kw">function</span> <span class="fn">getOwnerTokens</span>(<span class="type">address</span> owner)
-        <span class="kw">external</span> <span class="kw">view</span> <span class="kw">returns</span> (<span class="type">address</span>[] <span class="kw">memory</span>)
-    {
-        <span class="kw">return</span> ownerTokens[owner];
-    }
-}</pre>
-    </div>
-    <div style="margin-top:16px;" class="preview-panel">
-      <div class="info-row"><span class="info-key">OpenZeppelin</span><span class="info-val">^5.0.0</span></div>
-      <div class="info-row"><span class="info-key">Network</span><span class="info-val">Any EVM (Celo recommended)</span></div>
-      <div class="info-row"><span class="info-key">Deploy once</span><span class="info-val">TokenFactory — users call createToken()</span></div>
-      <div class="info-row"><span class="info-key">Features</span><span class="info-val">Mint · Burn · Pause · Custom decimals</span></div>
-    </div>
-  </section>
-</main>
-
-<div id="toast"></div>
-
-<script>
-  const deployedTokens = [];
-
-  function showTab(id) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    event.currentTarget.classList.add('active');
-  }
-
-  function toast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
-  }
-
-  function fmt(n) { return Number(n||0).toLocaleString(); }
-
-  function updatePreview() {
-    const name = document.getElementById('t-name').value || 'My Token';
-    const sym  = (document.getElementById('t-sym').value || 'TKN').toUpperCase();
-    const sup  = document.getElementById('t-supply').value || '1000000';
-    const mint = document.getElementById('f-mint').checked;
-    const burn = document.getElementById('f-burn').checked;
-    const pause = document.getElementById('f-pause').checked;
-
-    document.getElementById('prev-name').textContent = name;
-    document.getElementById('prev-sym-text').textContent = sym;
-    document.getElementById('prev-symbol').textContent = sym.slice(0,4);
-    document.getElementById('prev-supply').textContent = 'Supply: ' + fmt(sup);
-
-    const tags = ['<span class="tag">ERC-20</span>'];
-    if (mint) tags.push('<span class="tag green">Mintable</span>');
-    if (burn) tags.push('<span class="tag green">Burnable</span>');
-    if (pause) tags.push('<span class="tag green">Pausable</span>');
-    document.getElementById('prev-tags').innerHTML = tags.join('');
-  }
-
-  function deployToken() {
-    const name = document.getElementById('t-name').value.trim();
-    const sym  = document.getElementById('t-sym').value.trim().toUpperCase();
-    const supply = document.getElementById('t-supply').value.trim();
-    const dec  = document.getElementById('t-decimals').value || '18';
-    if (!name || !sym || !supply) { toast('Fill in name, symbol, and supply.'); return; }
-
-    const fakeAddr = '0x' + Math.random().toString(16).slice(2,12) + '...';
-    deployedTokens.push({ name, sym, supply, dec,
-      mint: document.getElementById('f-mint').checked,
-      burn: document.getElementById('f-burn').checked,
-      pause: document.getElementById('f-pause').checked,
-      addr: fakeAddr, ts: Date.now()
-    });
-    renderTokens();
-    toast(`${name} (${sym}) deployed!`);
-    showTabById('tokens');
-  }
-
-  function showTabById(id) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    document.querySelectorAll('.tab-btn')[1].classList.add('active');
-  }
-
-  function renderTokens() {
-    const list = document.getElementById('token-list');
-    if (!deployedTokens.length) {
-      list.innerHTML = '<p style="color:var(--muted);font-size:14px;">No tokens deployed yet.</p>';
-      return;
-    }
-    list.innerHTML = deployedTokens.map(t => {
-      const tags = ['<span class="tag">ERC-20</span>'];
-      if (t.mint) tags.push('<span class="tag green">Mintable</span>');
-      if (t.burn) tags.push('<span class="tag green">Burnable</span>');
-      if (t.pause) tags.push('<span class="tag green">Pausable</span>');
-      return `
+async function loadMyTokens(){
+  if(!signer){document.getElementById('token-list').innerHTML='<div style="padding:24px;color:var(--muted);font-size:13px">Connect your wallet to see your tokens.</div>';return;}
+  const list=document.getElementById('token-list');
+  try{
+    const addrs=await contract.getOwnerTokens(userAddress);
+    const all=[...localTokens];
+    if(!addrs.length&&!all.length){list.innerHTML='<div style="padding:24px;color:var(--muted);font-size:13px">No tokens deployed yet.</div>';return;}
+    list.innerHTML=(all.length?all.map(t=>`
       <div class="token-card">
-        <div class="token-card-left">
-          <div class="mini-icon">${t.sym.slice(0,3)}</div>
-          <div>
-            <div class="token-card-name">${t.name}</div>
-            <div class="token-card-sym">${t.sym} &nbsp;·&nbsp; ${fmt(t.supply)} supply</div>
-            <div style="margin-top:6px;">${tags.join(' ')}</div>
+        <div class="mini-icon">${t.sym.slice(0,3)}</div>
+        <div style="flex:1">
+          <div class="tk-name">${t.name}</div>
+          <div class="tk-sym">${t.sym} &nbsp;·&nbsp; ${fmt(t.sup)} supply</div>
+          <div style="margin-top:4px;display:flex;gap:5px">
+            ${t.mint?'<span class="tag green">Mint</span>':''}
+            ${t.burn?'<span class="tag green">Burn</span>':''}
+            ${t.pause?'<span class="tag green">Pause</span>':''}
           </div>
         </div>
-        <div style="text-align:right;font-size:12px;color:var(--muted);">
-          <div style="font-family:var(--mono);">${t.addr}</div>
-          <div>${new Date(t.ts).toLocaleDateString()}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
+        <div style="text-align:right"><a href="${scanAddr(t.addr)}" target="_blank" class="tx-link">${short(t.addr)}</a><br/><span class="mono">${new Date(t.ts).toLocaleDateString()}</span></div>
+      </div>`).join(''):'') + (addrs.length?addrs.map(a=>`
+      <div class="token-card">
+        <div class="mini-icon">TK</div>
+        <div style="flex:1"><div class="tk-name mono">${a}</div><div class="tk-sym">Deployed on Botchain</div></div>
+        <a href="${scanAddr(a)}" target="_blank" class="tx-link">View ↗</a>
+      </div>`).join(''):'');
+  }catch{list.innerHTML='<div style="padding:24px;color:var(--muted);font-size:13px">Could not load tokens.</div>';}
+}
 
-  function copyContract() {
-    navigator.clipboard.writeText(document.getElementById('sol-code').innerText)
-      .then(() => toast('Contract code copied!'));
-  }
-
-  updatePreview();
+window.addEventListener('load',()=>{if(window.ethereum?.selectedAddress)connectWallet();});
+window.ethereum?.on('accountsChanged',()=>connectWallet());
+window.ethereum?.on('chainChanged',()=>location.reload());
+updatePreview();
 </script>
+
+<footer style="border-top:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--bg);margin-top:40px">
+  <a href="https://botchain.ai" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+    <img src="https://botchain.ai/favicon.ico" alt="Botchain" width="20" height="20" style="border-radius:4px;object-fit:contain" onerror="this.style.display='none'"/>
+    <span style="font-weight:700;font-size:13px;color:var(--text)">Botchain</span>
+  </a>
+  <span style="color:var(--border)">|</span>
+  <a href="https://botchain.ai" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;font-family:var(--mono)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">botchain.ai &#x2197;</a>
+  <a href="https://scan.bohr.life" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;font-family:var(--mono)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">scan.bohr.life &#x2197;</a>
+  <a href="https://rpc.bohr.life" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;font-family:var(--mono)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">rpc.bohr.life &#x2197;</a>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+    <div style="width:7px;height:7px;border-radius:50%;background:#3fb950"></div>
+    <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">Chain ID 968</span>
+  </div>
+</footer>
 </body>
 </html>
