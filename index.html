@@ -73,7 +73,7 @@
 <section class="section active" id="deploy">
   <div class="h2">Launch your ERC-20 token</div>
   <p class="sub">One transaction on Botchain — the factory deploys a fresh token contract owned by you.</p>
-  <div id="net-bar" class="network-bar" style="display:none"><div class="dot"></div>Botchain · Chain ID 968 · <a href="https://scan.bohr.life" target="_blank" style="color:var(--accent)">scan.bohr.life ↗</a></div>
+  <div id="net-bar" class="network-bar" style="display:none"><div class="dot"></div>Botchain · Chain ID 677 · <a href="https://scan.botchain.ai" target="_blank" style="color:var(--accent)">scan.botchain.ai ↗</a></div>
 
   <div class="preview">
     <h3>Token Preview</h3>
@@ -114,10 +114,10 @@
 </main>
 <div id="toast"></div>
 <script>
-const CHAIN_ID = 968;
-const RPC_URL  = 'https://rpc.bohr.life';
-const SCAN_URL = 'https://scan.bohr.life';
-const FACTORY_ADDRESS = '0x211113A00151C9bBf7Dd8e7c134C0Bf9b7d5fC57'; // replace after deploy
+const CHAIN_ID = 677;
+const RPC_URL  = 'https://rpc.botchain.ai';
+const SCAN_URL = 'https://scan.botchain.ai';
+const FACTORY_ADDRESS = '0x32e036741fAA6Db0E0aDB60104f924af3235eB8d'; // replace after deploy
 
 const ABI = [
   "function createToken(string,string,uint256,uint8,bool,bool,bool) external returns (address)",
@@ -266,11 +266,11 @@ updatePreview();
   </a>
   <span style="color:var(--border)">|</span>
   <a href="https://botchain.ai" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;font-family:var(--mono)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">botchain.ai &#x2197;</a>
-  <a href="https://scan.bohr.life" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;font-family:var(--mono)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">scan.bohr.life &#x2197;</a>
-  <a href="https://rpc.bohr.life" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;font-family:var(--mono)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">rpc.bohr.life &#x2197;</a>
+  <a href="https://scan.botchain.ai" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;font-family:var(--mono)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">scan.botchain.ai &#x2197;</a>
+  <a href="https://rpc.botchain.ai" target="_blank" rel="noopener" style="font-size:12px;color:var(--muted);text-decoration:none;font-family:var(--mono)" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">rpc.botchain.ai &#x2197;</a>
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
     <div style="width:7px;height:7px;border-radius:50%;background:#3fb950"></div>
-    <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">Chain ID 968</span>
+    <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">Chain ID 677</span>
   </div>
 </footer>
 </body>
